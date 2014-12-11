@@ -17,7 +17,7 @@
     <node id="node_adore">
       <job id="adore" />
       <sources>
-        <source scope="runtime" id="pairs" title="Sentinel-1 master/salve pairs separeted by ;" abstract="Sentinel-1 master/salve pairs separeted by ;" refid="string:list">s3://terrasar-x/2014/02/TSX_20140201T164858.314_Etna_C221_O055_A_R_SM006_SSC.tar.gz</source>
+        <source scope="runtime" id="pairs" title="Sentinel-1 master/salve pairs" abstract="Sentinel-1 master;salve pairs separated by comma" refid="string:list">s3://terrasar-x/2014/02/TSX_20140201T164858.314_Etna_C221_O055_A_R_SM006_SSC.tar.gz</source>
       </sources>
       <parameters/>
     </node>

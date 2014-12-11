@@ -29,6 +29,9 @@ function cleanExit () {
 
 trap cleanExit EXIT
 
+export PATH=$_CIOP_APPLICATION/myapp/bin:$PATH
+
+
 param1="`ciop-getparam param1`"
 
 # loop through the pairs
@@ -37,9 +40,22 @@ do
   masterref=`echo $pair | cut -d";" -f1`
   slaveref=`echo $pair | cut -d";" -f2`
 
-  master=`echo $masterref | ciop-copy -U -O $TMPDIR`
-  slave=`echo $slaveref | ciop-copy -U -O $TMPDIR`
+  mastersafe=`echo $masterref | ciop-copy -U -O $TMPDIR`
+  slavesafe=`echo $slaveref | ciop-copy -U -O $TMPDIR`
+
+  # extract the SAFE content (only important annotation and measurement)
+  master=`extract_safe.sh $mastersafe $TMPDIR/data/master`
+  [ "$?" != "0" ] && exit $ERR_MASTER
+
+  slave=`extract_safe.sh $slavesafe $TMPDIR/data/slave`
+  [ "$?" != "0" ] && exit $ERR_SLAVE
+
+  # free some space
+  rm -f $mastersafe
+  rm -f $slavesafe
 
   # invoke the app with the local staged data
 
+  # stage-out the results
+  
 done
