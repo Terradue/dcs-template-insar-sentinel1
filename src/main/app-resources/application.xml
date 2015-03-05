@@ -4,18 +4,18 @@
     <jobTemplate id="myapp">
       <streamingExecutable>/application/myapp/run.sh</streamingExecutable>
       <defaultParameters>
-        <parameter id="parameter1" title="Parameter 1" abstract="Parameter 1" scope="runtime">value1</parameter>
+        <parameter id="parameter" title="Parameter sample" abstract="Example of parameter declaration" scope="runtime">value1</parameter>
       </defaultParameters>
       <defaultJobconf>
-      	<property id="ciop.job.max.tasks">1</property>
+        <property id="ciop.job.max.tasks">1</property>
         <property id="mapred.task.timeout">9900000000</property>
       </defaultJobconf>
     </jobTemplate>
   </jobTemplates>
   <workflow id="dcs-insar-sentinel1" title="Sentinel-1 InSAR processing" abstract="Sentinel-1 InSAR processing">
     <workflowVersion>1.0</workflowVersion>
-    <node id="node_adore">
-      <job id="adore" />
+    <node id="node_app">
+      <job id="myapp" />
       <sources>
         <source scope="runtime" id="pairs" title="Sentinel-1 master/salve pairs" abstract="Sentinel-1 master;salve pairs separated by comma" refid="string:list">s3://terrasar-x/2014/02/TSX_20140201T164858.314_Etna_C221_O055_A_R_SM006_SSC.tar.gz</source>
       </sources>
