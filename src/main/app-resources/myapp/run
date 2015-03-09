@@ -34,26 +34,29 @@ trap cleanExit EXIT
 
 #export PATH=$_CIOP_APPLICATION_PATH/myapp/bin:$PATH
 
-param1="`ciop-getparam param1`"
+param1="$( ciop-getparam param1 )"
 
-function get_data() {
-  masterref=$( echo "$1" | cut -d";" -f1 )
-  slaveref=$( echo "$1" | cut -d";" -f2 )
-
-  mastersafe=$( echo ${masterref} | ciop-copy -U -O ${TMPDIR}/download/master - )
-  # let's check the return value
-  [ $? -eq 0 ] || return ${ERR_MASTER}
-
-  slavesafe=$( echo ${slaveref} | ciop-copy -U -O ${TMPDIR}/download/slave - )
-  # let's check the return value
-  [ $? -eq 0 ] || return ${ERR_SLAVE}
+get_data() {
+  local ref=$1
+  local target=$2
+  local local_file
+  local enclosure
+  local res
+  enclosure="$( opensearch-client "${ref}" enclosure | tail -1 )"
+  res=$?
+  [ $res -eq 0 ] && [ -z "${enclosure}" ] && return ${ERR_GETDATA}
+  [ $res -ne 0 ] && enclosure=${ref}
+  ciop-log "INFO" "target is ${target}"
+  local_file="$( echo ${enclosure} | ciop-copy -f -U -O ${target} - 2> /dev/null )"
+  res=$?
+  [ ${res} -ne 0 ] && return ${res}
+  echo ${local_file}
 }
 
 function extract_safe() {
   safe_archive=${1}
   optional=${2}
   safe=$( unzip -l ${safe_archive} | grep "SAFE" | head -n 1 | awk '{ print $4 }' | xargs -I {} basename {} )
-
   [ -n "${optional}" ] && safe=${optional}/${safe}
   mkdir -p ${safe}
 
@@ -66,24 +69,8 @@ function extract_safe() {
   do
     unzip -o -j ${safe_archive} "${measurement}" -d "${safe}/measurement" 1>&2
   done
-
-  ciop-log $safe
-}
-
-function extract_data() {
-  for mastersafe in $( find ${TMPDIR}/download/master -name "*.zip" )
-  do
-	ciop-log "INFO" "Extracting ${mastersafe}"
-	# extract the SAFE content (only important annotation and measurement)
-	master=$( extract_safe ${mastersafe} ${TMPDIR}/data/master )
-	[ "$?" != "0" ] && return $ERR_EXTRACT
-  done
-
-  for slavesafe in $( find ${TMPDIR}/download/slave -type f -name "*.zip" )
-  do
-	slave=$( extract_safe ${slavesafe} ${TMPDIR}/data/slave )
-	[ "$?" != "0" ] && return $ERR_EXTRACT
-  done
+  echo ${safe}
+  
 }
 
 
@@ -96,21 +83,40 @@ function clean() {
 }
 
 function main(){
+  masterref=$( echo "${1}" | cut -d";" -f1 )
+  [ -z "${masterref}" ] && return ${ERR_MASTER}
 
-extract_data
-[ "$?" != "0" ] && return $ERR_EXTRACT
+  slaveref=$( echo "${1}" | cut -d";" -f2 )
+  [ -z "${slaveref}" ] && return ${ERR_SLAVE}
+  ciop-log "INFO" "Getting Master"
+  master=$( get_data ${masterref} ${TMPDIR} )
+  res=$?
+  [ "${res}" != "0" ] && return ${res}
+  ciop-log "INFO" "Getting Slave"
+  slave=$( get_data ${slaveref} ${TMPDIR} )
+  res=$?
+  [ "${res}" != "0" ] && return ${res}
+  ciop-log "INFO" "Extracting master"
+  extract_safe ${master} ${TMPDIR}/data/master
+  [ "$?" != "0" ] && return ${ERR_EXTRACT}
+  ciop-log "INFO" "Extracting slave"
+  extract_safe ${slave} ${TMPDIR}/data/slave
+  [ "$?" != "0" ] && return $ERR_EXTRACT
+
   # invoke the app with the local staged data
   # stage-out the results
+  # call the clean() function
 }
 
-mkdir -p ${TMPDIR}/download/master
-mkdir -p ${TMPDIR}/download/slave
 
 # loop through the pairs
 while read pair
 do
-    get_data "${pair}"
+    TMPDIR=${TMPDIR}/$( uuidgen )
+    mkdir -p ${TMPDIR}/download/master
+    mkdir -p ${TMPDIR}/download/slave
+    main ${pair}
+    [ "${res}" != "0" ] && exit ${res}
+    exit ${SUCCESS}
 done
 
-
-main || exit $?

@@ -2,12 +2,11 @@
 <application xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="dcs-template">
   <jobTemplates>
     <jobTemplate id="myapp">
-      <streamingExecutable>/application/myapp/run.sh</streamingExecutable>
+      <streamingExecutable>/application/myapp/run</streamingExecutable>
       <defaultParameters>
-        <parameter id="parameter" title="Parameter sample" abstract="Example of parameter declaration" scope="runtime">value1</parameter>
+        <parameter id="parameter" title="Parameter sample" abstract="Example of parameter declaration" scope="test">value1</parameter>
       </defaultParameters>
       <defaultJobconf>
-        <property id="ciop.job.max.tasks">1</property>
         <property id="mapred.task.timeout">9900000000</property>
       </defaultJobconf>
     </jobTemplate>
@@ -17,7 +16,7 @@
     <node id="node_app">
       <job id="myapp" />
       <sources>
-        <source scope="runtime" id="pairs" title="Sentinel-1 master/salve pairs" abstract="Sentinel-1 master;salve pairs separated by comma" refid="string:list">s3://terrasar-x/2014/02/TSX_20140201T164858.314_Etna_C221_O055_A_R_SM006_SSC.tar.gz</source>
+        <source scope="runtime" id="pairs" title="Sentinel-1 master/salve pairs" abstract="Sentinel-1 master;salve pairs separated by comma" refid="string:list">https://data.terradue.com/gs/catalogue/tepqw/gtfeature/search?uid=S1A_IW_GRDH_1SDV_20150305T051939_20150305T052004_004892_006196_B6ED;https://data.terradue.com/gs/catalogue/tepqw/gtfeature/search?uid=S1A_IW_RAW__0SDV_20150303T053527_20150303T053559_004863_0060F7_124C</source>
       </sources>
       <parameters/>
     </node>
