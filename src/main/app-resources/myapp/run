@@ -42,11 +42,15 @@ get_data() {
   local local_file
   local enclosure
   local res
-  enclosure="$( opensearch-client "${ref}" enclosure | tail -1 )"
+
+  [ "${ref:0:4}" == "file" ] || [ "${ref:0:1}" == "/" ] && enclosure=${ref}
+
+  [ -z "$enclosure" ] && enclosure=$( opensearch-client "${ref}" enclosure ) 
   res=$?
+  enclosure=$( echo ${enclosure} | tail -1 )
   [ $res -eq 0 ] && [ -z "${enclosure}" ] && return ${ERR_GETDATA}
   [ $res -ne 0 ] && enclosure=${ref}
-  ciop-log "INFO" "target is ${target}"
+
   local_file="$( echo ${enclosure} | ciop-copy -f -U -O ${target} - 2> /dev/null )"
   res=$?
   [ ${res} -ne 0 ] && return ${res}
@@ -57,17 +61,22 @@ function extract_safe() {
   safe_archive=${1}
   optional=${2}
   safe=$( unzip -l ${safe_archive} | grep "SAFE" | head -n 1 | awk '{ print $4 }' | xargs -I {} basename {} )
+
   [ -n "${optional}" ] && safe=${optional}/${safe}
   mkdir -p ${safe}
 
   for annotation in $( unzip -l "${safe_archive}" | grep annotation | grep .xml | grep -v calibration | awk '{ print $4 }' )
   do
      unzip -o -j ${safe_archive} "${annotation}" -d "${safe}/annotation" 1>&2
+     res=$?
+     [ "${res}" != "0" ] && return ${res}
   done
-
+  ciop-log "INFO" "Unzipped $( ls -l ${safe}/annotation )"
   for measurement in $( unzip -l ${safe_archive} | grep measurement | grep .tiff | awk '{ print $4 }' )
   do
     unzip -o -j ${safe_archive} "${measurement}" -d "${safe}/measurement" 1>&2
+    res=$?
+    [ "${res}" != "0" ] && return ${res}    
   done
   echo ${safe}
   
@@ -88,24 +97,32 @@ function main(){
 
   slaveref=$( echo "${1}" | cut -d";" -f2 )
   [ -z "${slaveref}" ] && return ${ERR_SLAVE}
+
   ciop-log "INFO" "Getting Master"
-  master=$( get_data ${masterref} ${TMPDIR} )
+  master=$( get_data ${masterref} ${TMPDIR}/download/master )
   res=$?
   [ "${res}" != "0" ] && return ${res}
+
   ciop-log "INFO" "Getting Slave"
-  slave=$( get_data ${slaveref} ${TMPDIR} )
+  slave=$( get_data ${slaveref} ${TMPDIR}/download/slave )
   res=$?
   [ "${res}" != "0" ] && return ${res}
+
   ciop-log "INFO" "Extracting master"
-  extract_safe ${master} ${TMPDIR}/data/master
+  master_safe=$( extract_safe ${master} ${TMPDIR}/data/master )
   [ "$?" != "0" ] && return ${ERR_EXTRACT}
+  enclosure="$( opensearch-client "${ref}" enclosure )"
   ciop-log "INFO" "Extracting slave"
-  extract_safe ${slave} ${TMPDIR}/data/slave
+  slave_safe=$( extract_safe ${slave} ${TMPDIR}/data/slave )
   [ "$?" != "0" ] && return $ERR_EXTRACT
 
   # invoke the app with the local staged data
   # stage-out the results
-  # call the clean() function
+  ciop-publish -m ${master_safe}/annotation/*.xml || return $?
+  ciop-publish -m ${master_safe}/measurement/*.tiff || return $?
+  ciop-publish -m ${slave_safe}/annotation/*.xml || return $?
+  ciop-publish -m ${slave_safe}/measurement/*.tiff || return $?
+  clean
 }
 
 
