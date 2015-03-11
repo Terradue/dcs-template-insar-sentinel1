@@ -1,0 +1,139 @@
+#!/bin/bash
+#
+#INSAR with Sentinel 1 data development template 
+
+# source the ciop functions (e.g. ciop-log)
+source ${ciop_job_include}
+# define the exit codes
+SUCCESS=0
+ERR_MASTER=10
+ERR_SLAVE=20
+ERR_EXTRACT=30
+ERR_PROCESS=40
+ERR_PUBLISH=50
+# add a trap to exit gracefully
+function cleanExit () {
+
+  local retval=$?
+  local msg=""
+
+  case "$retval" in
+    $SUCCESS) msg="Processing successfully concluded";;
+    $ERR_MASTER) msg="Failed to retrieve the master product";;
+    $ERR_SLAVE) msg="Failed to retrieve the slave product";;
+    $ERR_EXTRACT) msg="Failed to retrieve the extract the vol and lea";;
+    $ERR_PROCESS) msg="Failed during process execution";;
+    $ERR_PUBLISH) msg="Failed results publish";;
+    *) msg="Unknown error";;
+  esac
+  [ "$retval" != "0" ] && ciop-log "ERROR" "Error $retval - $msg, processing aborted" || ciop-log "INFO" "$msg"
+  exit $retval
+}
+
+trap cleanExit EXIT
+
+#export PATH=$_CIOP_APPLICATION_PATH/myapp/bin:$PATH
+
+param1="$( ciop-getparam param1 )"
+
+get_data() {
+  local ref=$1
+  local target=$2
+  local local_file
+  local enclosure
+  local res
+
+  [ "${ref:0:4}" == "file" ] || [ "${ref:0:1}" == "/" ] && enclosure=${ref}
+
+  [ -z "$enclosure" ] && enclosure=$( opensearch-client "${ref}" enclosure ) 
+  res=$?
+  enclosure=$( echo ${enclosure} | tail -1 )
+  [ $res -eq 0 ] && [ -z "${enclosure}" ] && return ${ERR_GETDATA}
+  [ $res -ne 0 ] && enclosure=${ref}
+
+  local_file="$( echo ${enclosure} | ciop-copy -f -U -O ${target} - 2> /dev/null )"
+  res=$?
+  [ ${res} -ne 0 ] && return ${res}
+  echo ${local_file}
+}
+
+function extract_safe() {
+  safe_archive=${1}
+  optional=${2}
+  safe=$( unzip -l ${safe_archive} | grep "SAFE" | head -n 1 | awk '{ print $4 }' | xargs -I {} basename {} )
+
+  [ -n "${optional}" ] && safe=${optional}/${safe}
+  mkdir -p ${safe}
+
+  for annotation in $( unzip -l "${safe_archive}" | grep annotation | grep .xml | grep -v calibration | awk '{ print $4 }' )
+  do
+     unzip -o -j ${safe_archive} "${annotation}" -d "${safe}/annotation" 1>&2
+     res=$?
+     [ "${res}" != "0" ] && return ${res}
+  done
+  ciop-log "INFO" "Unzipped $( ls -l ${safe}/annotation )"
+  for measurement in $( unzip -l ${safe_archive} | grep measurement | grep .tiff | awk '{ print $4 }' )
+  do
+    unzip -o -j ${safe_archive} "${measurement}" -d "${safe}/measurement" 1>&2
+    res=$?
+    [ "${res}" != "0" ] && return ${res}    
+  done
+  echo ${safe}
+  
+}
+
+
+function clean() {
+  # free some space
+  rm -rf ${TMPDIR}/download/master
+  rm -rf ${TMPDIR}/download/slave
+  rm -rf ${TMPDIR}/data/master
+  rm -rf ${TMPDIR}/data/slave
+}
+
+function main(){
+  masterref=$( echo "${1}" | cut -d";" -f1 )
+  [ -z "${masterref}" ] && return ${ERR_MASTER}
+
+  slaveref=$( echo "${1}" | cut -d";" -f2 )
+  [ -z "${slaveref}" ] && return ${ERR_SLAVE}
+
+  ciop-log "INFO" "Getting Master"
+  master=$( get_data ${masterref} ${TMPDIR}/download/master )
+  res=$?
+  [ "${res}" != "0" ] && return ${res}
+
+  ciop-log "INFO" "Getting Slave"
+  slave=$( get_data ${slaveref} ${TMPDIR}/download/slave )
+  res=$?
+  [ "${res}" != "0" ] && return ${res}
+
+  ciop-log "INFO" "Extracting master"
+  master_safe=$( extract_safe ${master} ${TMPDIR}/data/master )
+  [ "$?" != "0" ] && return ${ERR_EXTRACT}
+  enclosure="$( opensearch-client "${ref}" enclosure )"
+  ciop-log "INFO" "Extracting slave"
+  slave_safe=$( extract_safe ${slave} ${TMPDIR}/data/slave )
+  [ "$?" != "0" ] && return $ERR_EXTRACT
+
+  # invoke the app with the local staged data
+  # stage-out the results
+  ciop-publish -m ${master_safe}/annotation/*.xml || return $?
+  ciop-publish -m ${master_safe}/measurement/*.tiff || return $?
+  ciop-publish -m ${slave_safe}/annotation/*.xml || return $?
+  ciop-publish -m ${slave_safe}/measurement/*.tiff || return $?
+  clean
+}
+
+
+# loop through the pairs
+while read pair
+do
+    TMPDIR=${TMPDIR}/$( uuidgen )
+    mkdir -p ${TMPDIR}/download/master
+    mkdir -p ${TMPDIR}/download/slave
+    main ${pair}
+    [ "${res}" != "0" ] && exit ${res}
+    exit ${SUCCESS}
+done
+
