@@ -75,4 +75,4 @@ Copyright 2015 Terradue Srl
 
 Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 
-> This work has been co-funded by the EC FP7 project MED-SUV Grant agreement 308665 
+
