@@ -8,7 +8,7 @@
 	<artifactId>dcs-template-insar-sentinel1</artifactId>
 	<packaging>rpm</packaging>
 	<description>Developer Cloud Sandbox template for Sentinel-1 InSAR applications</description>
-	<version>1.1-SNAPSHOT</version>
+	<version>1.0</version>
 
 	<scm>
 		<connection>scm:git:git@github.com:Terradue/dcs-template-insar-sentinel1.git</connection>
