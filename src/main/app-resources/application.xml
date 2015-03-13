@@ -16,8 +16,8 @@
     <node id="node_app">
       <job id="myapp" />
       <sources>
-        <!--source scope="runtime" id="pairs" title="Sentinel-1 master/salve pairs" abstract="Sentinel-1 master;salve pairs URLs from Geohazards Portal, separated by comma" refid="string:list">https://data.terradue.com/gs/catalogue/tepqw/gtfeature/search?uid=S1A_IW_GRDH_1SDV_20150305T051939_20150305T052004_004892_006196_B6ED;https://data.terradue.com/gs/catalogue/tepqw/gtfeature/search?uid=S1A_IW_RAW__0SDV_20150303T053527_20150303T053559_004863_0060F7_124C</source-->
-        <source scope="runtime" id="pairs" title="Sentinel-1 master/salve pairs" abstract="Sentinel-1 master;salve pairs local paths separated by comma" refid="string:list">/tmp/S1A_IW_GRDH_1SDV_20150305T051939_20150305T052004_004892_006196_B6ED.zip;/tmp/S1A_IW_RAW__0SDV_20150303T053527_20150303T053559_004863_0060F7_124C.zip</source>
+        <!--source scope="runtime" id="pairs" title="Sentinel-1 master/slave pairs" abstract="Sentinel-1 master;slave pairs URLs from Geohazards Portal, separated by comma" refid="string:list">https://data.terradue.com/gs/catalogue/tepqw/gtfeature/search?uid=S1A_IW_GRDH_1SDV_20150305T051939_20150305T052004_004892_006196_B6ED;https://data.terradue.com/gs/catalogue/tepqw/gtfeature/search?uid=S1A_IW_RAW__0SDV_20150303T053527_20150303T053559_004863_0060F7_124C</source-->
+        <source scope="runtime" id="pairs" title="Sentinel-1 master/slave pairs" abstract="Sentinel-1 master;slave pairs local paths separated by comma" refid="string:list">/tmp/S1A_IW_GRDH_1SDV_20150305T051939_20150305T052004_004892_006196_B6ED.zip;/tmp/S1A_IW_RAW__0SDV_20150303T053527_20150303T053559_004863_0060F7_124C.zip</source>
       </sources>
       <parameters/>
     </node>
