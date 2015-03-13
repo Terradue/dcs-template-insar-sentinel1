@@ -53,7 +53,6 @@ Run this command in a shell:
 ciop-run
 ```
 Or invoke the Web Processing Service via the Sandbox dashboard.
-```
 
 #### Input description
 
