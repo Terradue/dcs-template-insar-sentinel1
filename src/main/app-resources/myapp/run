@@ -92,16 +92,17 @@ function clean() {
 }
 
 function get_POEORB() {
+  
   local S1_ref=$1
   local aux_dest=$2
+  local startdate=$3
+  local enddate=$4
 
-  [ -z "${aux_dest}" ] && aux_dest="." 
+  [ -z "${aux_dest}" ] && aux_dest="."
 
-  local startdate
-  local enddate
+  [ -z "${startdate}" ] && startdate="$( opensearch-client "${S1_ref}" startdate)"
 
-  startdate="$( opensearch-client "${S1_ref}" startdate)" 
-  enddate="$( opensearch-client "${S1_ref}" enddate)" 
+  [ -z "${enddate}" ] && enddate="$( opensearch-client "${S1_ref}" enddate)"
 
   aux_list=$( opensearch-client  "http://data.terradue.com/gs/catalogue/aux/gtfeature/search?q=AUX_POEORB&start=${startdate}&stop=${enddate}" enclosure )
 
