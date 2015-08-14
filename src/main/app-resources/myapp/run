@@ -91,6 +91,27 @@ function clean() {
   rm -rf ${TMPDIR}/data/slave
 }
 
+function get_POEORB() {
+  
+  local S1_ref=$1
+  local aux_dest=$2
+  local startdate=$3
+  local enddate=$4
+
+  [ -z "${aux_dest}" ] && aux_dest="."
+
+  [ -z "${startdate}" ] && startdate="$( opensearch-client "${S1_ref}" startdate)"
+
+  [ -z "${enddate}" ] && enddate="$( opensearch-client "${S1_ref}" enddate)"
+
+  aux_list=$( opensearch-client  "http://data.terradue.com/gs/catalogue/aux/gtfeature/search?q=AUX_POEORB&start=${startdate}&stop=${enddate}" enclosure )
+
+  [ -z "${aux_list}" ] && return 1
+
+  echo ${aux_list} | ciop-copy -o ${aux_dest} -
+
+}
+
 function main(){
   masterref=$( echo "${1}" | cut -d";" -f1 )
   [ -z "${masterref}" ] && return ${ERR_MASTER}
@@ -103,15 +124,25 @@ function main(){
   res=$?
   [ "${res}" != "0" ] && return ${res}
 
+  ciop-log "INFO" "Getting the Orbital data for Master"
+  get_POEORB "${masterref}" ${TMPDIR}/download/master
+  res=$?
+  [ "${res}" != "0" ] && return ${ERR_POERB}  
+
   ciop-log "INFO" "Getting Slave"
   slave=$( get_data ${slaveref} ${TMPDIR}/download/slave )
   res=$?
   [ "${res}" != "0" ] && return ${res}
 
+  ciop-log "INFO" "Getting the Orbital data for Slave"
+  get_POEORB "${slaveref}" ${TMPDIR}/download/slave
+  res=$?
+  [ "${res}" != "0" ] && return ${ERR_POERB}
+
   ciop-log "INFO" "Extracting master"
   master_safe=$( extract_safe ${master} ${TMPDIR}/data/master )
   [ "$?" != "0" ] && return ${ERR_EXTRACT}
-  enclosure="$( opensearch-client "${ref}" enclosure )"
+
   ciop-log "INFO" "Extracting slave"
   slave_safe=$( extract_safe ${slave} ${TMPDIR}/data/slave )
   [ "$?" != "0" ] && return $ERR_EXTRACT
@@ -124,7 +155,6 @@ function main(){
   ciop-publish -m ${slave_safe}/measurement/*.tiff || return $?
   clean
 }
-
 
 # loop through the pairs
 while read pair
