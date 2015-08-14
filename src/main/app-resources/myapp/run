@@ -164,6 +164,5 @@ do
     mkdir -p ${TMPDIR}/download/slave
     main ${pair}
     [ "${res}" != "0" ] && exit ${res}
-    exit ${SUCCESS}
 done
-
+exit ${SUCCESS}
