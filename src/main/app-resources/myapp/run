@@ -163,6 +163,7 @@ do
     mkdir -p ${TMPDIR}/download/master
     mkdir -p ${TMPDIR}/download/slave
     main ${pair}
+    res=$?
     [ "${res}" != "0" ] && exit ${res}
 done
 exit ${SUCCESS}
